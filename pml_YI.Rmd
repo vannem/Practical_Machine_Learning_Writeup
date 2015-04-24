@@ -1,0 +1,69 @@
+---
+title: "pml_YI.Rmd"
+author: "YI HAN"
+date: "Wednesday, April 22, 2015"
+output: html_document
+---
+
+## Loading the data and basic setting
+```{r,echo=TRUE}
+setwd("D:/YI_20150421/2_Coursera/Prac_ML/Projects/1")
+TrainingData <- read.csv(file="pml-training.csv", head=TRUE, sep=",")
+TestingData <- read.csv(file="pml-testing.csv", head=TRUE, sep=",")
+
+library(lattice)
+library(ggplot2)
+library(caret)
+library(randomForest)
+set.seed(777)
+
+```
+
+## Removing those cols which contain NAs and "", and choosing some meaningful parameters as predictors
+```{r,echo=TRUE}
+TrD <- TrainingData[,colSums(is.na(TrainingData))==0] #remove cols with NAs
+TeD <- TestingData[,colSums(is.na(TrainingData))==0] #remove cols with NAs
+
+TrainingData <- TrD[,colSums(TrD=="")==0] #remove cols with ""
+TestingData <- TeD[,colSums(TrD=="")==0] #remove cols with ""
+
+rm(TrD)
+rm(TeD)
+
+names(TrainingData)
+names(TestingData)
+
+TrainingData <- TrainingData[,7:60]
+TestingData <- TestingData[,7:60]
+# TrainingData$classe <- as.factor(TrainingData$classe) if they are not factor!!!
+
+```
+
+## Applying 5-folds cross validation in 5 repetitions and training the data using random forest method, and checking how well this modelFit is.
+```{r,echo=TRUE}
+
+ctrl <- trainControl(method="repeatedcv", number=5, repeats=5) 
+# number: Either the number of folds or number of resampling iterations
+
+modelFit <- train(classe ~ ., data=TrainingData, method="rf", trControl=ctrl)
+
+modelFit
+
+summary(modelFit)
+
+plot(varImp(modelFit))
+
+```
+### Here shows hwo this model works for the training data (train set and validation set). As you can see, the accuracy is very high as around 99.6%. The reason I choose 5-folds cross validation is because it is 80% as train set and 20% as validation set which is very general or quite similar to default setting (70% and 30%). I use 5 repetitions trying to make the resuls more believable. 
+
+## Calculating the errors using the TrainingData Set, generating data for the prediction vector for the Assigment Submission
+```{r,echo=TRUE}
+predictionsTr <- predict(modelFit, newdata=TrainingData)
+confusionMatrix(predictionsTr,TrainingData$classe)
+```
+### It shows that sensitiity and specificity for 5 classes are all 1. The kappa statistic of 1 reflects the out-of-sample error. 
+
+## Predicting the rsults for the testing data
+```{r,echo=TRUE}
+predict(modelFit, newdata=TestingData)
+```
